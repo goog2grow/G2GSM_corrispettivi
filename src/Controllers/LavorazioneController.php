@@ -10,6 +10,7 @@ use App\Services\CsvParseResult;
 use App\Services\CsvParser;
 use App\Services\CsvValidationException;
 use App\Services\MesiItaliani;
+use App\Services\PivotCalculator;
 
 final class LavorazioneController
 {
@@ -96,9 +97,12 @@ final class LavorazioneController
         ];
         $_SESSION['pending_upload'] = $pending;
 
+        $pivot = (new PivotCalculator())->calcola($result->rows, $mese, $anno);
+
         View::renderWithLayout('lavorazioni/nuova_step2', [
             'title' => 'Verifica caricamento',
             'result' => $result,
+            'pivot' => $pivot,
             'pending' => $pending,
             'extraWarnings' => $this->calcolaAvvisiPeriodoEBrand($result, $mese, $anno, $brand['nome'] ?? ''),
         ]);

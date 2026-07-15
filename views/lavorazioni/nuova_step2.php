@@ -1,5 +1,6 @@
 <?php
 /** @var \App\Services\CsvParseResult $result */
+/** @var \App\Services\PivotResult $pivot */
 /** @var array $pending */
 /** @var array $extraWarnings */
 use App\Core\View;
@@ -62,18 +63,29 @@ $anteprimaRighe = array_slice($result->rows, 0, 15);
   <div class="col-md-3">
     <div class="card text-center">
       <div class="card-body">
-        <div class="text-muted small">Totale incassato (grezzo)</div>
-        <div class="h4 mb-0"><?= number_format($result->totaleIncassato, 2, ',', '.') ?> &euro;</div>
+        <div class="text-muted small">Totale incassato (senza split)</div>
+        <div class="h4 mb-0"><?= number_format($pivot->totaleSenzaSplitIncassato, 2, ',', '.') ?> &euro;</div>
       </div>
     </div>
   </div>
   <div class="col-md-3">
     <div class="card text-center">
       <div class="card-body">
-        <div class="text-muted small">Totale IVA (grezzo)</div>
-        <div class="h4 mb-0"><?= number_format($result->totaleIva, 2, ',', '.') ?> &euro;</div>
+        <div class="text-muted small">Totale IVA (senza split)</div>
+        <div class="h4 mb-0"><?= number_format($pivot->totaleSenzaSplitIva, 2, ',', '.') ?> &euro;</div>
       </div>
     </div>
+  </div>
+</div>
+<p class="text-muted small mb-4">
+  "Senza split": somma di tutti i totPaid/totTax del file, indipendentemente da giorno e aliquota
+  (riepilogo sintetico, vedi anche i totali della pivot sotto).
+</p>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="h6">Pivot giorno &times; aliquota - <?= View::e(MesiItaliani::nome($pivot->mese)) ?> <?= $pivot->anno ?></h2>
+    <?php View::render('lavorazioni/_pivot_table', ['pivot' => $pivot]); ?>
   </div>
 </div>
 
@@ -127,8 +139,8 @@ $anteprimaRighe = array_slice($result->rows, 0, 15);
 </div>
 
 <div class="alert alert-info">
-  Il calcolo della pivot per aliquota/giorno e il salvataggio definitivo della lavorazione
-  (con la logica di naming/versioning) verranno collegati nei prossimi step di sviluppo.
+  Il salvataggio definitivo della lavorazione (con la logica di naming/versioning) verra'
+  collegato nel prossimo step di sviluppo.
 </div>
 
 <a href="/lavorazioni/nuova" class="btn btn-outline-secondary">Torna indietro</a>
