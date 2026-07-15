@@ -1,8 +1,18 @@
 # Corrispettivi Shopify - configurazione Apache
 #
-# L'autenticazione (Basic Auth) sara' aggiunta in un successivo step di
-# sviluppo, vedi .htaccess.example per l'istruzione completa una volta
-# disponibile.
+# ATTENZIONE - prima di pubblicare il sito:
+#   1. crea il file .htpasswd (vedi .htpasswd.example e le istruzioni
+#      nel README per generare l'hash della password);
+#   2. sostituisci il placeholder AuthUserFile qui sotto con il path
+#      ASSOLUTO del file .htpasswd sul server (es. su SiteGround:
+#      /home/<utente_hosting>/www/<tuodominio>/public_html/.htpasswd,
+#      il path esatto e' visibile in Site Tools > Site > File Manager).
+# Se AuthUserFile punta a un file inesistente, Apache risponde 500 su
+# TUTTO il sito: crea prima .htpasswd, poi modifica il path qui sotto.
+AuthType Basic
+AuthName "Area riservata - Corrispettivi Shopify"
+AuthUserFile /SOSTITUISCI/CON/PATH/ASSOLUTO/.htpasswd
+Require valid-user
 
 # Nega l'accesso diretto ai file sensibili, non devono mai essere
 # raggiungibili via URL
