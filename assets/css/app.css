@@ -1,0 +1,8 @@
+.table-pivot th, .table-pivot td {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.table-pivot th:first-child, .table-pivot td:first-child {
+    text-align: left;
+}

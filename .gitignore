@@ -1,7 +1,6 @@
 /vendor/
 .env
 .htpasswd
-.htaccess
 
 /storage/uploads/*
 !/storage/uploads/.gitkeep

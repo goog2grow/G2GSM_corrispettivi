@@ -1,0 +1,27 @@
+# Corrispettivi Shopify - configurazione Apache
+#
+# L'autenticazione (Basic Auth) sara' aggiunta in un successivo step di
+# sviluppo, vedi .htaccess.example per l'istruzione completa una volta
+# disponibile.
+
+# Nega l'accesso diretto ai file sensibili, non devono mai essere
+# raggiungibili via URL
+<FilesMatch "\.(env|sql|md|log)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Nega l'accesso diretto alle cartelle applicative non pubbliche:
+    # tutto passa dal front controller index.php
+    RewriteRule ^(src|storage|scripts|migrations|views|vendor)(/|$) - [F,L]
+
+    # Front controller: le richieste che non puntano a un file o a una
+    # cartella reale vengono instradate a index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+Options -Indexes
