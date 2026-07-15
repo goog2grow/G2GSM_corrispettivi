@@ -121,8 +121,9 @@ su *tutto* il sito. Segui questo ordine:
    server con una riga `username:hash`.
 2. Modifica `AuthUserFile` in `.htaccess` con il path **assoluto** del
    file appena creato (il path esatto si trova in Site Tools > Site >
-   File Manager, aprendo le proprieta' del file, oppure e' quasi
-   sempre nella forma `/home/<utente_hosting>/www/<tuodominio>/public_html/.htpasswd`
+   File Manager, aprendo le proprieta' del file; sulla document root di
+   un sottodominio e' quasi sempre nella forma
+   `/home/<utente_hosting>/www/<tuodominio>/public_html/<sottodominio>/.htpasswd`
    su SiteGround).
 3. Solo a questo punto il sito sara' raggiungibile (con richiesta di
    credenziali).
@@ -154,6 +155,36 @@ Non usare mai generatori di hash online per una password reale: la
 password transiterebbe in chiaro verso un servizio terzo.
 
 ## Deploy su SiteGround (hosting condiviso)
+
+### 0. Dove caricare i file: sottodominio, non sottocartella
+
+L'app assume di stare **alla radice** del sito che la serve: link,
+redirect e `.htaccess` usano tutti path assoluti tipo `/lavorazioni`,
+`/brand` (senza un prefisso configurabile). Questo significa che:
+
+- **va bene**: dominio principale (`public_html/`) oppure un
+  **sottodominio dedicato** (es. `corrispettivi.tuodominio.it`), che ha
+  una document root tutta sua;
+- **non va bene cosi' com'e'**: una sottocartella di un dominio che
+  ospita gia' un altro sito (es. `tuodominio.it/corrispettivi/`) - i
+  link interni punterebbero comunque alla radice del dominio principale
+  e romperebbero la navigazione. Per quel caso servirebbe prima
+  aggiungere un base path configurabile al codice.
+
+**Scelta consigliata: crea un sottodominio dedicato.**
+
+1. **Site Tools > Site > Subdomains**: crea un sottodominio (es.
+   `corrispettivi`). SiteGround genera una document root dedicata (il
+   path esatto viene mostrato a schermo, tipicamente
+   `public_html/corrispettivi/` sotto la cartella del dominio
+   principale) - annotalo, serve al punto 5 per `AuthUserFile`.
+2. **Site Tools > Security > SSL Manager**: installa il certificato
+   Let's Encrypt gratuito sul sottodominio *prima* di esporre il sito.
+   La Basic Auth manda le credenziali in chiaro se il sito non e' in
+   HTTPS.
+3. Tutti i file dell'applicazione (punto 3 sotto) vanno caricati
+   **dentro la document root del sottodominio**, non in `public_html/`
+   del dominio principale.
 
 ### 1. Creare il database dedicato
 
@@ -196,7 +227,8 @@ mysql -u <utente> -p <nome_database> < schema.sql
    per generare la cartella `vendor/` (non e' versionata su Git).
 2. Carica l'intero contenuto del repository (incluso `vendor/`, esclusi
    `.git/`, `.env`, eventuale `.htpasswd`) nella document root del
-   dominio/sottodominio scelto, tramite:
+   **sottodominio** creato al punto 0 (non in `public_html/` del
+   dominio principale), tramite:
    - **File Manager** di Site Tools (upload di uno zip + estrazione), oppure
    - **SFTP** (credenziali in Site Tools > Site > SFTP Accounts) con un
      client come FileZilla, oppure
@@ -230,8 +262,9 @@ aggiorna il path assoluto in `AuthUserFile` dentro `.htaccess`.
 
 ### 6. Verifica finale
 
-1. Visita il dominio: deve comparire il prompt di autenticazione del
-   browser (Basic Auth) prima di qualsiasi altra cosa.
+1. Visita il sottodominio (es. `https://corrispettivi.tuodominio.it`):
+   deve comparire il prompt di autenticazione del browser (Basic Auth)
+   prima di qualsiasi altra cosa.
 2. Dopo il login, la home reindirizza a `/lavorazioni` (elenco, vuoto
    al primo avvio).
 3. Da **Gestione brand** (`/brand`), crea almeno un brand.
@@ -239,8 +272,9 @@ aggiorna il path assoluto in `AuthUserFile` dentro `.htaccess`.
    confermare che upload, salvataggio, export Excel e cartella
    `storage/uploads/` funzionino correttamente sull'hosting.
 5. Prova ad aprire direttamente nel browser un URL come
-   `https://tuodominio.it/.env` o `https://tuodominio.it/schema.sql`:
-   deve risultare `403 Forbidden` (bloccato da `.htaccess`).
+   `https://corrispettivi.tuodominio.it/.env` o
+   `https://corrispettivi.tuodominio.it/schema.sql`: deve risultare
+   `403 Forbidden` (bloccato da `.htaccess`).
 
 ## Note di sicurezza
 
