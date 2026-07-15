@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/src/bootstrap.php';
 
 use App\Controllers\BrandController;
+use App\Controllers\ExportController;
 use App\Controllers\LavorazioneController;
 use App\Core\Router;
 
@@ -14,6 +15,7 @@ $router = new Router();
 
 $lavorazioneController = new LavorazioneController();
 $brandController = new BrandController();
+$exportController = new ExportController();
 
 $router->get('/', static function () {
     header('Location: /lavorazioni');
@@ -26,6 +28,7 @@ $router->post('/lavorazioni/anteprima', static fn () => $lavorazioneController->
 $router->post('/lavorazioni/salva', static fn () => $lavorazioneController->salva());
 $router->get('/lavorazioni/salvata', static fn () => $lavorazioneController->salvata());
 $router->post('/lavorazioni/annulla', static fn () => $lavorazioneController->annulla());
+$router->get('/lavorazioni/{id}/excel', static fn (string $id) => $exportController->excel((int) $id));
 
 $router->get('/brand', static fn () => $brandController->index());
 $router->post('/brand', static fn () => $brandController->store());
