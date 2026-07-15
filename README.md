@@ -223,6 +223,16 @@ mysql -u <utente> -p <nome_database> < schema.sql
 
 ### 3. Caricare i file dell'applicazione
 
+**Opzione automatica (consigliata)**: il repository include un GitHub
+Actions workflow (`.github/workflows/build-deploy-package.yml`) che ad
+ogni push su un branch `claude/**` genera automaticamente uno zip con
+`vendor/` gia' installato via `composer install --no-dev`, scaricabile
+dalla tab **Actions** del repository. Non salva ne' richiede nessuna
+credenziale. Dettagli in `.github/DEPLOY-WITH-ACTIONS.md`. Poi vai
+direttamente al punto 2 sotto con quello zip gia' pronto.
+
+**Opzione manuale**:
+
 1. In locale, esegui `composer install --no-dev --optimize-autoloader`
    per generare la cartella `vendor/` (non e' versionata su Git).
 2. Carica l'intero contenuto del repository (incluso `vendor/`, esclusi

@@ -1,0 +1,67 @@
+name: Build Deploy Package
+
+on:
+  push:
+    branches:
+      - 'claude/**'
+  workflow_dispatch:
+
+jobs:
+  build-package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, dom, gd, zip, fileinfo, iconv, simplexml, xmlreader, xmlwriter, ctype, pdo, pdo_mysql
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish || true
+
+      - name: Install dependencies (no dev, ottimizzato per produzione)
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy
+
+          # Zip di tutto il progetto, vendor/ incluso (gia' installato
+          # sopra), escludendo cio' che non deve mai finire sul server:
+          # storia git, credenziali reali (mai presenti in questo repo,
+          # ma per sicurezza), file specifici della CI.
+          zip -r deploy/corrispettivi-deploy-ready.zip \
+            . \
+            -x "*.git*" \
+            -x ".env" \
+            -x ".htpasswd" \
+            -x "deploy/*" \
+            -x ".github/*"
+
+          echo "Pacchetto creato con successo."
+          ls -lh deploy/
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: corrispettivi-deploy-package
+          path: deploy/corrispettivi-deploy-ready.zip
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "## Build completato" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Scarica l'artifact **corrispettivi-deploy-package** da questa pagina," >> "$GITHUB_STEP_SUMMARY"
+          echo "estrai lo zip e caricalo sulla document root del sottodominio su SiteGround." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Ricorda di creare comunque .env e .htpasswd direttamente sul server," >> "$GITHUB_STEP_SUMMARY"
+          echo "non sono inclusi nel pacchetto." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Dimensione pacchetto" >> "$GITHUB_STEP_SUMMARY"
+          du -h deploy/corrispettivi-deploy-ready.zip | awk '{print $1}' >> "$GITHUB_STEP_SUMMARY"
