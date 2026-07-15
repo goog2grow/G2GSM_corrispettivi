@@ -18,6 +18,7 @@ use App\Core\View;
   <?php endif; ?>
 </div>
 
+<a href="/lavorazioni/<?= (int) $esito['lavorazione_id'] ?>" class="btn btn-outline-primary">Vai al dettaglio</a>
 <a href="/lavorazioni/<?= (int) $esito['lavorazione_id'] ?>/excel" class="btn btn-success">Scarica Excel</a>
 <a href="/lavorazioni/nuova" class="btn btn-primary">Carica un'altra lavorazione</a>
 <a href="/lavorazioni" class="btn btn-outline-secondary">Torna all'elenco</a>

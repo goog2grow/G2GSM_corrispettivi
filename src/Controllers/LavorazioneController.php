@@ -6,10 +6,14 @@ namespace App\Controllers;
 
 use App\Core\View;
 use App\Models\Brand;
+use App\Models\Lavorazione;
+use App\Models\Log;
+use App\Models\OrdineRaw;
 use App\Services\CsvParseResult;
 use App\Services\CsvParser;
 use App\Services\CsvValidationException;
 use App\Services\MesiItaliani;
+use App\Services\OrdineRawMapper;
 use App\Services\PivotCalculator;
 use App\Services\SalvataggioLavorazioneService;
 use Throwable;
@@ -17,10 +21,16 @@ use Throwable;
 final class LavorazioneController
 {
     private Brand $brandModel;
+    private Lavorazione $lavorazioneModel;
+    private OrdineRaw $ordineRawModel;
+    private Log $logModel;
 
     public function __construct()
     {
         $this->brandModel = new Brand();
+        $this->lavorazioneModel = new Lavorazione();
+        $this->ordineRawModel = new OrdineRaw();
+        $this->logModel = new Log();
     }
 
     /**
@@ -192,13 +202,113 @@ final class LavorazioneController
     }
 
     /**
-     * Placeholder: la pagina elenco completa arriva allo step 6.
+     * Elenco lavorazioni raggruppate per anno, con totale annuo
+     * calcolato solo sulle lavorazioni attive.
      */
     public function elenco(): void
     {
-        View::renderWithLayout('lavorazioni/elenco_placeholder', [
+        $lavorazioni = $this->lavorazioneModel->tutte();
+
+        // conteggio versioni per combinazione, per evidenziare a video
+        // i periodi con piu' di una versione caricata
+        $conteggioVersioni = [];
+        foreach ($lavorazioni as $l) {
+            $chiave = $l['brand_id'] . '_' . $l['mese'] . '_' . $l['anno'];
+            $conteggioVersioni[$chiave] = ($conteggioVersioni[$chiave] ?? 0) + 1;
+        }
+
+        $perAnno = [];
+        foreach ($lavorazioni as $l) {
+            $anno = (int) $l['anno'];
+            if (!isset($perAnno[$anno])) {
+                $perAnno[$anno] = ['righe' => [], 'totaleIncassato' => 0.0, 'totaleIva' => 0.0];
+            }
+            $perAnno[$anno]['righe'][] = $l;
+            if ((int) $l['is_attiva'] === 1) {
+                $perAnno[$anno]['totaleIncassato'] += (float) $l['totale_incassato'];
+                $perAnno[$anno]['totaleIva'] += (float) $l['totale_iva'];
+            }
+        }
+
+        $flashSuccess = $_SESSION['flash_success'] ?? null;
+        unset($_SESSION['flash_success']);
+
+        View::renderWithLayout('lavorazioni/elenco', [
             'title' => 'Elenco lavorazioni',
+            'perAnno' => $perAnno,
+            'conteggioVersioni' => $conteggioVersioni,
+            'mesiItaliani' => MesiItaliani::tutti(),
+            'flashSuccess' => $flashSuccess,
         ]);
+    }
+
+    /**
+     * Dettaglio di una singola lavorazione: storico completo del
+     * periodo, pivot ricalcolata on-the-fly dai dati grezzi salvati,
+     * anteprima dati grezzi.
+     */
+    public function dettaglio(int $id): void
+    {
+        $lavorazione = $this->lavorazioneModel->find($id);
+        if ($lavorazione === null) {
+            http_response_code(404);
+            echo 'Lavorazione non trovata.';
+            return;
+        }
+
+        $brand = $this->brandModel->find((int) $lavorazione['brand_id']);
+        $storico = $this->lavorazioneModel->storicoPeriodo(
+            (int) $lavorazione['brand_id'],
+            (int) $lavorazione['mese'],
+            (int) $lavorazione['anno']
+        );
+
+        $righeRawDb = $this->ordineRawModel->trovaPerLavorazione($id);
+        $righeCsvShape = array_map(
+            static fn (array $row) => OrdineRawMapper::versoCsvShape($row),
+            $righeRawDb
+        );
+        $pivot = (new PivotCalculator())->calcola($righeCsvShape, (int) $lavorazione['mese'], (int) $lavorazione['anno']);
+
+        View::renderWithLayout('lavorazioni/dettaglio', [
+            'title' => $lavorazione['nome_lavorazione'],
+            'lavorazione' => $lavorazione,
+            'brandNome' => $brand['nome'] ?? '',
+            'storico' => $storico,
+            'pivot' => $pivot,
+            'anteprimaRighe' => array_slice($righeRawDb, 0, 20),
+            'totaleRigheRaw' => count($righeRawDb),
+        ]);
+    }
+
+    /**
+     * Soft-delete: mai un DELETE fisico. Se la lavorazione eliminata
+     * era quella attiva, NESSUNA promozione automatica della versione
+     * precedente: il periodo resta senza lavorazione attiva finche' non
+     * viene caricato un nuovo file (comportamento intenzionale).
+     */
+    public function elimina(int $id): void
+    {
+        $lavorazione = $this->lavorazioneModel->find($id);
+        if ($lavorazione === null) {
+            header('Location: /lavorazioni');
+            exit;
+        }
+
+        if ($lavorazione['deleted_at'] === null) {
+            $this->lavorazioneModel->softDelete($id);
+            $this->logModel->registra(
+                $id,
+                'eliminazione',
+                sprintf('Eliminata lavorazione "%s"', $lavorazione['nome_lavorazione']),
+                (int) $lavorazione['numero_ordini'],
+                (int) $lavorazione['numero_resi']
+            );
+            $_SESSION['flash_success'] = sprintf('Lavorazione "%s" eliminata.', $lavorazione['nome_lavorazione']);
+        }
+
+        header('Location: /lavorazioni');
+        exit;
     }
 
     private function validaFormBase(int $mese, int $anno, int $brandId): array

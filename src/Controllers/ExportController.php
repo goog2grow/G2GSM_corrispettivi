@@ -59,6 +59,33 @@ final class ExportController
         $writer->save('php://output');
     }
 
+    /**
+     * Serve il CSV originale cosi' come caricato, per tracciabilita'.
+     * Il path viene sempre risolto da DB (mai da input utente): nessun
+     * rischio di path traversal.
+     */
+    public function csvOriginale(int $id): void
+    {
+        $lavorazione = $this->lavorazioneModel->find($id);
+        if ($lavorazione === null) {
+            http_response_code(404);
+            echo 'Lavorazione non trovata.';
+            return;
+        }
+
+        $percorsoAssoluto = dirname(__DIR__, 2) . '/' . $lavorazione['file_originale_path'];
+        if (!is_file($percorsoAssoluto)) {
+            http_response_code(404);
+            echo 'File CSV originale non trovato su disco.';
+            return;
+        }
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . basename($percorsoAssoluto) . '"');
+        header('Content-Length: ' . (string) filesize($percorsoAssoluto));
+        readfile($percorsoAssoluto);
+    }
+
     private function sanitizzaNomeFile(string $nome): string
     {
         $nome = preg_replace('/[^A-Za-z0-9]+/', '_', $nome) ?? $nome;

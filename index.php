@@ -29,6 +29,11 @@ $router->post('/lavorazioni/salva', static fn () => $lavorazioneController->salv
 $router->get('/lavorazioni/salvata', static fn () => $lavorazioneController->salvata());
 $router->post('/lavorazioni/annulla', static fn () => $lavorazioneController->annulla());
 $router->get('/lavorazioni/{id}/excel', static fn (string $id) => $exportController->excel((int) $id));
+$router->get('/lavorazioni/{id}/csv', static fn (string $id) => $exportController->csvOriginale((int) $id));
+$router->post('/lavorazioni/{id}/elimina', static fn (string $id) => $lavorazioneController->elimina((int) $id));
+// deve stare DOPO le route statiche /lavorazioni/nuova e /lavorazioni/salvata,
+// altrimenti il router le catturerebbe come se fossero un {id}
+$router->get('/lavorazioni/{id}', static fn (string $id) => $lavorazioneController->dettaglio((int) $id));
 
 $router->get('/brand', static fn () => $brandController->index());
 $router->post('/brand', static fn () => $brandController->store());

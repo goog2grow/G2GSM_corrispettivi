@@ -74,6 +74,58 @@ final class Lavorazione
     }
 
     /**
+     * Tutte le lavorazioni non cancellate (attive e storiche), con il
+     * nome brand gia' risolto, per la pagina elenco.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function tutte(): array
+    {
+        $stmt = $this->db->query(
+            'SELECT l.*, b.nome AS brand_nome
+             FROM crp_lavorazioni l
+             JOIN crp_brand b ON b.id = l.brand_id
+             WHERE l.deleted_at IS NULL
+             ORDER BY l.anno DESC, l.mese ASC, b.nome ASC, l.numero_versione ASC'
+        );
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Storico completo di un periodo per la pagina di dettaglio,
+     * incluse le versioni soft-deleted (mostrate come "eliminata"):
+     * a differenza di tutteLeVersioni() non filtra deleted_at, perche'
+     * qui serve tracciabilita' completa, non solo cio' che e' visibile
+     * nell'elenco.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function storicoPeriodo(int $brandId, int $mese, int $anno): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT * FROM crp_lavorazioni
+             WHERE brand_id = :brand_id AND mese = :mese AND anno = :anno
+             ORDER BY numero_versione ASC'
+        );
+        $stmt->execute(['brand_id' => $brandId, 'mese' => $mese, 'anno' => $anno]);
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Soft delete: mai un DELETE fisico. Marca anche is_attiva = 0 per
+     * evitare ambiguita' in qualunque futura query che controlli solo
+     * is_attiva senza controllare deleted_at. Non promuove nessuna
+     * versione precedente: il periodo resta senza lavorazione attiva.
+     */
+    public function softDelete(int $id): void
+    {
+        $stmt = $this->db->prepare('UPDATE crp_lavorazioni SET deleted_at = NOW(), is_attiva = 0 WHERE id = :id');
+        $stmt->execute(['id' => $id]);
+    }
+
+    /**
      * NON fa mai UPDATE distruttivo sui dati di una lavorazione: si
      * limita a marcarla come non piu' attiva. I dati (raw, totali,
      * nome, file) restano invariati.
