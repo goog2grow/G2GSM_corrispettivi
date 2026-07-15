@@ -278,6 +278,7 @@ final class LavorazioneController
             'pivot' => $pivot,
             'anteprimaRighe' => array_slice($righeRawDb, 0, 20),
             'totaleRigheRaw' => count($righeRawDb),
+            'log' => $this->logModel->perLavorazione($id),
         ]);
     }
 

@@ -5,6 +5,7 @@
 /** @var \App\Services\PivotResult $pivot */
 /** @var array $anteprimaRighe */
 /** @var int $totaleRigheRaw */
+/** @var array $log */
 use App\Core\View;
 use App\Services\MesiItaliani;
 
@@ -133,6 +134,40 @@ $eliminata = $lavorazione['deleted_at'] !== null;
         </tbody>
       </table>
     </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="h6">Log operazioni</h2>
+    <?php if (empty($log)): ?>
+      <p class="text-muted mb-0">Nessuna operazione registrata.</p>
+    <?php else: ?>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Operazione</th>
+              <th>Descrizione</th>
+              <th class="text-end">N. ordini</th>
+              <th class="text-end">N. resi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($log as $voce): ?>
+            <tr>
+              <td><?= View::e((new DateTime($voce['data_operazione']))->format('d/m/Y H:i')) ?></td>
+              <td><span class="badge text-bg-light text-dark border"><?= View::e($voce['tipo_operazione']) ?></span></td>
+              <td><?= View::e($voce['descrizione']) ?></td>
+              <td class="text-end"><?= $voce['numero_ordini'] !== null ? (int) $voce['numero_ordini'] : '-' ?></td>
+              <td class="text-end"><?= $voce['numero_resi'] !== null ? (int) $voce['numero_resi'] : '-' ?></td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif; ?>
   </div>
 </div>
 
