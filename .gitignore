@@ -1,0 +1,11 @@
+/vendor/
+.env
+.htpasswd
+.htaccess
+
+/storage/uploads/*
+!/storage/uploads/.gitkeep
+
+*.log
+.DS_Store
+composer.phar
