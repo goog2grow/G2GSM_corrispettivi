@@ -23,6 +23,9 @@ $router->get('/', static function () {
 $router->get('/lavorazioni', static fn () => $lavorazioneController->elenco());
 $router->get('/lavorazioni/nuova', static fn () => $lavorazioneController->nuovaStep1());
 $router->post('/lavorazioni/anteprima', static fn () => $lavorazioneController->anteprima());
+$router->post('/lavorazioni/salva', static fn () => $lavorazioneController->salva());
+$router->get('/lavorazioni/salvata', static fn () => $lavorazioneController->salvata());
+$router->post('/lavorazioni/annulla', static fn () => $lavorazioneController->annulla());
 
 $router->get('/brand', static fn () => $brandController->index());
 $router->post('/brand', static fn () => $brandController->store());

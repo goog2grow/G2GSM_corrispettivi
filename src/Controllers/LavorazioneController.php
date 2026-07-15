@@ -11,6 +11,8 @@ use App\Services\CsvParser;
 use App\Services\CsvValidationException;
 use App\Services\MesiItaliani;
 use App\Services\PivotCalculator;
+use App\Services\SalvataggioLavorazioneService;
+use Throwable;
 
 final class LavorazioneController
 {
@@ -106,6 +108,87 @@ final class LavorazioneController
             'pending' => $pending,
             'extraWarnings' => $this->calcolaAvvisiPeriodoEBrand($result, $mese, $anno, $brand['nome'] ?? ''),
         ]);
+    }
+
+    /**
+     * Step 3 del wizard: conferma e salvataggio definitivo. Rilegge il
+     * CSV dalla cartella temporanea (non ri-arriva dal browser) e
+     * delega la logica di naming/versioning al servizio dedicato.
+     */
+    public function salva(): void
+    {
+        $pending = $_SESSION['pending_upload'] ?? null;
+
+        if ($pending === null || !is_file($pending['tmp_path'])) {
+            $_SESSION['upload_errors'] = ['La sessione di caricamento e\' scaduta: ricarica il file.'];
+            header('Location: /lavorazioni/nuova');
+            exit;
+        }
+
+        try {
+            $result = (new CsvParser())->parseFile($pending['tmp_path']);
+        } catch (CsvValidationException $e) {
+            unset($_SESSION['pending_upload']);
+            $_SESSION['upload_errors'] = [$e->getMessage()];
+            header('Location: /lavorazioni/nuova');
+            exit;
+        }
+
+        try {
+            $esito = (new SalvataggioLavorazioneService())->salva($pending, $result);
+        } catch (Throwable $e) {
+            $_SESSION['upload_errors'] = ['Errore durante il salvataggio della lavorazione: ' . $e->getMessage()];
+            header('Location: /lavorazioni/nuova');
+            exit;
+        }
+
+        unset($_SESSION['pending_upload']);
+
+        $_SESSION['salvataggio_esito'] = [
+            'lavorazione_id' => $esito->lavorazioneId,
+            'nome_lavorazione' => $esito->nomeLavorazione,
+            'numero_versione' => $esito->numeroVersione,
+            'precedente_nome' => $esito->precedenteAttiva['nome_lavorazione'] ?? null,
+        ];
+
+        header('Location: /lavorazioni/salvata');
+        exit;
+    }
+
+    /**
+     * Conferma post-salvataggio: mostra nome definitivo, versione ed
+     * eventuale versione precedente sostituita.
+     */
+    public function salvata(): void
+    {
+        $esito = $_SESSION['salvataggio_esito'] ?? null;
+        unset($_SESSION['salvataggio_esito']);
+
+        if ($esito === null) {
+            header('Location: /lavorazioni');
+            exit;
+        }
+
+        View::renderWithLayout('lavorazioni/salvata', [
+            'title' => 'Lavorazione salvata',
+            'esito' => $esito,
+        ]);
+    }
+
+    /**
+     * Annulla il caricamento in corso: elimina il file temporaneo (mai
+     * arrivato a essere una lavorazione) e torna allo step 1.
+     */
+    public function annulla(): void
+    {
+        $pending = $_SESSION['pending_upload'] ?? null;
+        if ($pending !== null && is_file($pending['tmp_path'])) {
+            @unlink($pending['tmp_path']);
+        }
+        unset($_SESSION['pending_upload']);
+
+        header('Location: /lavorazioni/nuova');
+        exit;
     }
 
     /**

@@ -138,9 +138,16 @@ $anteprimaRighe = array_slice($result->rows, 0, 15);
   </div>
 </div>
 
-<div class="alert alert-info">
-  Il salvataggio definitivo della lavorazione (con la logica di naming/versioning) verra'
-  collegato nel prossimo step di sviluppo.
+<?php if (!empty($result->rowErrors)): ?>
+<div class="alert alert-warning">
+  Ci sono righe scartate per errori di formato (vedi sopra): confermando, la lavorazione
+  verra' comunque salvata con le sole righe valide.
 </div>
+<?php endif; ?>
 
-<a href="/lavorazioni/nuova" class="btn btn-outline-secondary">Torna indietro</a>
+<form action="/lavorazioni/salva" method="post" class="d-inline">
+  <button type="submit" class="btn btn-success">Conferma e salva</button>
+</form>
+<form action="/lavorazioni/annulla" method="post" class="d-inline">
+  <button type="submit" class="btn btn-outline-secondary">Annulla e torna indietro</button>
+</form>
