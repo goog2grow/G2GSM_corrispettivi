@@ -139,7 +139,9 @@ htpasswd -c .htpasswd admin
 ```
 (omettere `-c` se il file esiste gia' e si vuole aggiungere un altro
 utente; il flag `-c` **crea/sovrascrive** il file, quindi va usato solo
-la prima volta).
+la prima volta). Il comando `htpasswd` genera di default un hash in
+formato APR1-MD5 (`$apr1$...`), che e' quello da usare (vedi sotto sul
+perche').
 
 **Senza accesso SSH** (via PHP, funziona su qualunque hosting): lo
 script incluso genera una riga pronta da incollare in `.htpasswd`,
@@ -147,9 +149,19 @@ senza bisogno del comando `htpasswd`:
 ```
 php scripts/cli/genera_htpasswd.php admin "LaTuaPasswordSicura"
 ```
-L'output (`admin:$2y$...`) va copiato interamente dentro `.htpasswd`
-sul server. L'hash e' in formato bcrypt, supportato da Apache 2.4.4+
-(gli hosting moderni, incluso SiteGround, lo supportano).
+L'output (`admin:$apr1$...`) va copiato interamente dentro `.htpasswd`
+sul server.
+
+**Perche' APR1-MD5 e non bcrypt**: Apache 2.4.4+ supporta in teoria
+anche hash bcrypt (`$2y$...`) in `AuthUserFile`, ma solo se APR-util e'
+stata compilata con supporto crypto - non garantito su ogni build di
+Apache degli hosting condivisi. Su un'installazione reale e' stato
+osservato che un hash bcrypt in `.htpasswd` causa un `500 Internal
+Server Error` su tutto il sito non appena la Basic Auth viene attivata,
+pur con path/permessi/contenuto tutti corretti. APR1-MD5 e' il formato
+storico e universalmente supportato da qualsiasi Apache: lo script
+incluso lo implementa in puro PHP (verificato byte per byte contro
+l'output di `htpasswd` e `openssl passwd -apr1`) proprio per questo.
 
 Non usare mai generatori di hash online per una password reale: la
 password transiterebbe in chiaro verso un servizio terzo.
