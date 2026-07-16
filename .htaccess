@@ -15,8 +15,10 @@ AuthUserFile /SOSTITUISCI/CON/PATH/ASSOLUTO/.htpasswd
 Require valid-user
 
 # Nega l'accesso diretto ai file sensibili, non devono mai essere
-# raggiungibili via URL
-<FilesMatch "\.(env|sql|md|log)$">
+# raggiungibili via URL. Include anche i file di log che alcuni hosting
+# (es. SiteGround) creano automaticamente nella document root senza
+# estensione con punto (es. "php_errorlog", non "php_error.log").
+<FilesMatch "(^\.env$|\.(sql|md|log)$|^php_errorlog$|error_log)">
     Require all denied
 </FilesMatch>
 
